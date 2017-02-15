@@ -1530,7 +1530,7 @@ enable_pcap(port_info_t *info, uint32_t state)
 			pktgen_set_port_flags(info, SEND_PCAP_PKTS);
 		} else
 			pktgen_clr_port_flags(info, SEND_PCAP_PKTS);
-		pktgen_packet_rate(info);
+		pktgen_packet_rate_pps(info);
 	}
 }
 
@@ -2095,7 +2095,7 @@ pktgen_port_defaults(uint32_t pid, uint8_t seq)
 	info->prime_cnt         = DEFAULT_PRIME_COUNT;
 	info->delta             = 0;
 
-	pktgen_packet_rate(info);
+	pktgen_packet_rate_pps(info);
 
 	pkt->ip_mask = DEFAULT_NETMASK;
 	if ( (pid & 1) == 0) {
@@ -2327,7 +2327,7 @@ pktgen_set_port_seqCnt(port_info_t *info, uint32_t cnt)
 		pktgen_set_port_flags(info, SEND_SEQ_PKTS);
 	} else
 		pktgen_clr_port_flags(info, SEND_SEQ_PKTS);
-	pktgen_packet_rate(info);
+	pktgen_packet_rate_pps(info);
 }
 
 /**************************************************************************//**
@@ -2407,7 +2407,7 @@ single_set_tx_burst(port_info_t *info, uint32_t burst)
 	else if (burst > DEFAULT_PKT_BURST)
 		burst = DEFAULT_PKT_BURST;
 	info->tx_burst = burst;
-	pktgen_packet_rate(info);
+	pktgen_packet_rate_pps(info);
 }
 
 /**************************************************************************//**
@@ -2461,7 +2461,7 @@ single_set_pkt_size(port_info_t *info, uint16_t size)
 	pkt->pktSize = (size - ETHER_CRC_LEN);
 
 	pktgen_packet_ctor(info, SINGLE_PKT, -1);
-	pktgen_packet_rate(info);
+	pktgen_packet_rate_pps(info);
 }
 
 /**************************************************************************//**
@@ -2508,8 +2508,27 @@ single_set_tx_rate(port_info_t *info, const char *r)
 	else if (rate > 100.00)
 		rate = 100.00;
 	info->tx_rate = rate;
+	pktgen_packet_rate_pps(info);
+}
 
-	pktgen_packet_rate(info);
+/**************************************************************************//**
+ *
+ * single_set_tx_pps - Set the transmit pps as an integer.
+ *
+ * DESCRIPTION
+ * Set the transmit pps as an integer value for all ports listed.
+ *
+ * RETURNS: N/A
+ *
+ * SEE ALSO:
+ */
+
+void
+single_set_tx_pps(port_info_t *info, uint32_t pps)
+{
+	if (pps > 0)
+	    info->tx_pps = pps;
+		pktgen_packet_pps(info);
 }
 
 /**************************************************************************//**
@@ -2596,7 +2615,7 @@ enable_range(port_info_t *info, uint32_t state)
 		pktgen_set_port_flags(info, SEND_RANGE_PKTS);
 	} else
 		pktgen_clr_port_flags(info, SEND_RANGE_PKTS);
-	pktgen_packet_rate(info);
+	pktgen_packet_rate_pps(info);
 }
 
 /**************************************************************************//**

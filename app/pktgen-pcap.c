@@ -378,6 +378,6 @@ pktgen_pcap_parse(pcap_info_t *pcap, port_info_t *info, unsigned qid)
 		pktgen_set_port_flags(info, SEND_PCAP_PKTS);
 	}
 
-	pktgen_packet_rate(info);
+	pktgen_packet_rate_pps(info);
 	return 0;
 }

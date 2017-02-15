@@ -351,7 +351,12 @@ void pktgen_page_display(struct rte_timer *tim, void *arg);
 
 void pktgen_packet_ctor(port_info_t *info, int32_t seq_idx,
 			       int32_t type);
+
+void pktgen_packet_rate_pps(port_info_t *info);
+
 void pktgen_packet_rate(port_info_t *info);
+
+void pktgen_packet_pps(port_info_t *info);
 
 void pktgen_send_mbuf(struct rte_mbuf *m, uint8_t pid, uint16_t qid);
 
