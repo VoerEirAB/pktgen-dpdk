@@ -278,6 +278,8 @@ pktgen_set(lua_State *L) {
 				     pktgen_set_pkt_size(info, value);
 			     else if (!strcasecmp(what, "rate"))
 				     pktgen_set_tx_rate(info, value);
+			     else if (!strcasecmp(what, "pps"))
+				     pktgen_set_tx_pps(info, value);
 			     else if (!strcasecmp(what, "burst"))
 				     pktgen_set_tx_burst(info, value);
 			     else if (!strcasecmp(what, "cycles"))

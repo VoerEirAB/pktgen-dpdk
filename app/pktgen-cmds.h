@@ -131,6 +131,7 @@ extern void pktgen_set_port_value(port_info_t *info,
 				  char type,
 				  uint32_t portValue);
 extern void pktgen_set_tx_rate(port_info_t *info, uint32_t rate);
+extern void pktgen_set_tx_pps(port_info_t *info, uint32_t rate);
 extern void pktgen_set_ipaddr(port_info_t *info, char type,
 			      cmdline_ipaddr_t *ip);
 extern void pktgen_set_dst_mac(port_info_t *info, cmdline_etheraddr_t *mac);

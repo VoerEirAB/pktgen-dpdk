@@ -91,6 +91,44 @@ pktgen_wire_size(port_info_t *info)
 
 /**************************************************************************//**
  *
+ * pktgen_packet_rate_pps - Calculate the transmit rate from either the rate or
+ * the pps value.
+ *
+ * DESCRIPTION
+ * Calculate the number of cycles to wait between sending bursts of traffic,
+ * from either the rate or the pps value.
+ *
+ * RETURNS: N/A
+ *
+ * SEE ALSO:
+ */
+
+void
+pktgen_packet_rate_pps(port_info_t *info)
+{
+	uint8_t tx_rate = info->tx_rate;
+  if (tx_rate == 255)  // tx_rate was set to -1. Which implies, pps was set.
+  {
+    #ifdef DEBUG
+      printf("**********************************pktgen_packet_rate_pps***********************************\n");
+      printf("Calling `pktgen_packet_pps()`.  rate: %i\n", tx_rate);
+      printf("*******************************************************************************************\n");
+    #endif
+    pktgen_packet_pps(info);
+  }
+  else
+  {
+    #ifdef DEBUG
+      printf("**********************************pktgen_packet_rate_pps***********************************\n");
+      printf("Calling `pktgen_packet_rate()`.  rate: %i\n", tx_rate);
+      printf("*******************************************************************************************\n");
+    #endif
+    pktgen_packet_rate(info);
+  }
+}
+
+/**************************************************************************//**
+ *
  * pktgen_packet_rate - Calculate the transmit rate.
  *
  * DESCRIPTION
@@ -111,6 +149,42 @@ pktgen_packet_rate(port_info_t *info)
 
 	info->tx_pps    = pps;
 	info->tx_cycles = ((cpp * info->tx_burst) / get_port_txcnt(pktgen.l2p, info->pid));
+
+  #ifdef DEBUG
+    printf("**********************************pktgen_packet_rate***************************************\n");
+    printf("wiresize: %lu\tlink: %lu\tpps: %lu\trate: %i\tcpp: %lu\n", wire_size, link, pps, info->tx_rate, cpp);
+    printf("*******************************************************************************************\n");
+  #endif
+}
+
+/**************************************************************************//**
+ *
+ * pktgen_packet_pps - Set the PPS to fix rate.
+ *
+ * DESCRIPTION
+ * Calculate the number of cycles to wait between sending bursts of traffic.
+ *
+ * RETURNS: N/A
+ *
+ * SEE ALSO:
+ */
+
+void
+pktgen_packet_pps(port_info_t *info)
+{
+  uint64_t wire_size = (pktgen_wire_size(info) * 8);
+  uint64_t link = (uint64_t)info->link.link_speed * Million;
+  uint64_t pps = info->tx_pps;
+  uint8_t tx_rate = -1;   // disabling rate
+  uint64_t cpp = (pps > 0) ? (pktgen.hz / pps) : (pktgen.hz / 4);
+
+  info->tx_rate = tx_rate;
+  info->tx_cycles = ((cpp * info->tx_burst) / get_port_txcnt(pktgen.l2p, info->pid));
+  #ifdef DEBUG
+    printf("**********************************pktgen_packet_pps****************************************\n");
+    printf("wiresize: %lu\tlink: %lu\tpps: %lu\trate: %i\tcpp: %lu\n", wire_size, link, pps, tx_rate, cpp);
+    printf("*******************************************************************************************\n");
+  #endif
 }
 
 /**************************************************************************//**

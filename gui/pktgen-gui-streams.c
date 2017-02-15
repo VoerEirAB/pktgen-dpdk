@@ -654,7 +654,7 @@ pktsize_enter_callback(GtkWidget *widget, gpointer *data)
 		return;
 	}
 
-	pktgen_packet_rate(info);
+	pktgen_packet_rate_pps(info);
 }
 
 /**************************************************************************//**
