@@ -97,7 +97,7 @@ pktgen_ipv4_ctor(pkt_seq_t *pkt, ipHdr_t *ip)
 	ip->vl              = (IPv4_VERSION << 4) | (sizeof(ipHdr_t) / 4);
 
 	ip->tlen            = htons(tlen);
-	ip->ttl             = 4;
+	ip->ttl             = 64;
 	ip->tos             = 0;
 
 	pktgen.ident        += 27;	/* bump by a prime number */
