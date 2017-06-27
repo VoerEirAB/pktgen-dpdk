@@ -146,8 +146,6 @@ pktgen_packet_rate(port_info_t *info)
 void
 pktgen_packet_pps(port_info_t *info)
 {
-  uint64_t wire_size = (pktgen_wire_size(info) * 8);
-  uint64_t link = (uint64_t)info->link.link_speed * Million;
   uint64_t pps = info->tx_pps;
   uint8_t tx_rate = -1;   // disabling rate
   uint64_t cpp = (pps > 0) ? (pktgen.hz / pps) : (pktgen.hz / 4);
@@ -155,6 +153,8 @@ pktgen_packet_pps(port_info_t *info)
   info->tx_rate = tx_rate;
   info->tx_cycles = ((cpp * info->tx_burst) / get_port_txcnt(pktgen.l2p, info->pid));
   #ifdef DEBUG
+    uint64_t wire_size = (pktgen_wire_size(info) * 8);
+    uint64_t link = (uint64_t)info->link.link_speed * Million;
     printf("**********************************pktgen_packet_pps****************************************\n");
     printf("wiresize: %lu\tlink: %lu\tpps: %lu\trate: %i\tcpp: %lu\n", wire_size, link, pps, tx_rate, cpp);
     printf("*******************************************************************************************\n");
