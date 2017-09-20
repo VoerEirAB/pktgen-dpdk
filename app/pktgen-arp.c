@@ -154,6 +154,12 @@ pktgen_send_arp(uint32_t pid, uint32_t type, uint8_t seq_idx)
 void
 pktgen_process_arp(struct rte_mbuf *m, uint32_t pid, uint32_t vlan)
 {
+        time_t rawtime;
+        struct tm * timeinfo;
+        FILE *fp;
+        char src_ip[20], src_mac[20], dst_ip[20], dst_mac[20];
+        pkt_seq_t *pkt_print;
+
 	port_info_t   *info = &pktgen.info[pid];
 	pkt_seq_t     *pkt;
 	struct ether_hdr *eth = rte_pktmbuf_mtod(m, struct ether_hdr *);
@@ -216,6 +222,19 @@ pktgen_process_arp(struct rte_mbuf *m, uint32_t pid, uint32_t vlan)
 
 			/* Flush all of the packets in the queue. */
 			pktgen_set_q_flags(info, 0, DO_TX_FLUSH);
+                pkt_print = pkt;
+                fp = fopen("/tmp/pktgen-arp.log", "a");
+                time ( &rawtime );
+                timeinfo = localtime ( &rawtime );
+                strcpy(src_ip, inet_ntop4(src_ip, sizeof(src_ip),htonl(pkt_print->ip_src_addr.addr.ipv4.s_addr), pkt_print->ip_mask));
+                strcpy(src_mac, inet_mtoa(src_mac, sizeof(src_mac), &pkt_print->eth_src_addr));
+                strcpy(dst_ip, inet_ntop4(dst_ip, sizeof(dst_ip),htonl(pkt_print->ip_dst_addr.addr.ipv4.s_addr), pkt_print->ip_mask));
+                strcpy(dst_mac, inet_mtoa(dst_mac, sizeof(dst_mac), &pkt_print->eth_dst_addr));
+                fprintf(fp, "Time (packet_sent): %s\n", asctime (timeinfo));
+                fprintf(fp, "SRC IP: %s\nSRC MAC: %s\n\nDST IP: %s\nDST MAC: %s\n", src_ip, src_mac, dst_ip, dst_mac);
+                fprintf(fp, "\n\n\n\n");
+                fclose(fp);
+
 
 			/* No need to free mbuf as it was reused */
 			return;
