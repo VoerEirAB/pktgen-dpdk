@@ -26,6 +26,7 @@
 /* Internal APIs */
 char *pktgen_flags_string(port_info_t *info);
 char *pktgen_transmit_count_rate(int port, char *buff, int len);
+char *pktgen_transmit_count_pps(int port, char *buff, int len);
 void pktgen_update_display(void);
 void pktgen_update(void);
 char *pktgen_link_state(int port, char *buff, int len);
