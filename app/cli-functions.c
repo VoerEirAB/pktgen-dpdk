@@ -346,7 +346,8 @@ range_cmd(int argc, char **argv)
 			"prime|"		/*  8 */ \
 			"dump|"			/*  9 */ \
 			"vlan|"			/* 10 */ \
-			"seqCnt"		/* 11 */
+			"seqCnt|"		/* 11 */ \
+			"pps"			/* 12 */
 
 static struct cli_map set_map[] = {
 	{ 10, "set %P %|" set_types " %d" },
@@ -373,6 +374,7 @@ static const char *set_help[] = {
 	"  <type>         count             - number of packets to transmit",
 	"                 size              - size of the packet to transmit",
 	"                 rate              - Packet rate in percentage",
+	"                 pps               - Packets per second to transmit",
 	"                 burst             - number of packets in a burst",
 	"                 sport             - Source port number for TCP",
 	"                 dport             - Destination port number for TCP",
@@ -447,6 +449,7 @@ set_cmd(int argc, char **argv)
 					case 9: debug_set_port_dump(info, value); break;
 					case 10: single_set_vlan_id(info, value); break;
 					case 11: pktgen_set_port_seqCnt(info, value); break;
+					case 12: single_set_tx_pps(info, value); break;
 					default:
 						return cli_cmd_error("Set command is invalid", "Set", argc, argv);
 				}) );

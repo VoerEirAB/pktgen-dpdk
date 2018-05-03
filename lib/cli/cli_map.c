@@ -16,6 +16,10 @@ cli_map_list_search(const char *fmt, char *item, int index)
 	int size;
 	char *opts[CLI_MAX_ARGVS + 1];
 
+	#ifdef DEBUG
+		printf("In cli_map_list_search()\nfmt: %s\nitem: %s\nindex: %d", fmt, item, index);
+	#endif
+
 	size = strlen(fmt) + 1;
 	buf = alloca(size);
 	if (!buf)

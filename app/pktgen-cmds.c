@@ -159,6 +159,7 @@ pktgen_script_save(char *path)
 			rte_atomic64_read(&info->transmit_count));
 		fprintf(fd, "set %d size %d\n", info->pid, pkt->pktSize + ETHER_CRC_LEN);
 		fprintf(fd, "set %d rate %g\n", info->pid, info->tx_rate);
+		fprintf(fd, "set %d pps %" PRIu64 "\n", info->pid, info->tx_pps);
 		fprintf(fd, "set %d burst %d\n", info->pid, info->tx_burst);
 		fprintf(fd, "set %d sport %d\n", info->pid, pkt->sport);
 		fprintf(fd, "set %d dport %d\n", info->pid, pkt->dport);
@@ -498,6 +499,7 @@ pktgen_lua_save(char *path)
 			rte_atomic64_read(&info->transmit_count));
 		fprintf(fd, "pktgen.set('%d', 'size', %d);\n", info->pid, pkt->pktSize + ETHER_CRC_LEN);
 		fprintf(fd, "pktgen.set('%d', 'rate', %g);\n", info->pid, info->tx_rate);
+		fprintf(fd, "pktgen.set('%d', 'pps', %" PRIu64 ");\n", info->pid, info->tx_pps);
 		fprintf(fd, "pktgen.set('%d', 'burst', %d);\n", info->pid, info->tx_burst);
 		fprintf(fd, "pktgen.set('%d', 'sport', %d);\n", info->pid, pkt->sport);
 		fprintf(fd, "pktgen.set('%d', 'dport', %d);\n", info->pid, pkt->dport);
@@ -866,12 +868,42 @@ pktgen_transmit_count_rate(int port, char *buff, int len)
 {
 	port_info_t *info = &pktgen.info[port];
 
+	char rate[] = "Not set";
+
+	if (info->tx_rate != 255)
+		snprintf(rate, sizeof(rate), "%g%%", info->tx_rate);
+
 	if (rte_atomic64_read(&info->transmit_count) == 0)
-		snprintf(buff, len, "Forever /%g%%", info->tx_rate);
+		snprintf(buff, len, "Forever / %s", rate);
 	else
-		snprintf(buff, len, "%" PRIu64 " /%g%%",
+		snprintf(buff, len, "%" PRIu64 " / %s",
 			 rte_atomic64_read(&info->transmit_count),
-			 info->tx_rate);
+			 rate);
+
+	return buff;
+}
+
+/**************************************************************************//**
+ *
+ * pktgen_transmit_count_pps - Get a string for the current transmit PPS
+ *
+ * DESCRIPTION
+ * Current value of the transmit packets per second as a string.
+ *
+ * RETURNS: String pointer to transmit packets per second.
+ *
+ * SEE ALSO:
+ */
+
+char *
+pktgen_transmit_count_pps(int port, char *buff, int len)
+{
+	port_info_t *info = &pktgen.info[port];
+
+	if (info->tx_rate != 255)  // PPS was not set. tx_rate is not -1.
+		snprintf(buff, len, "Not Set");
+	else
+		snprintf(buff, len, "%" PRIu64, info->tx_pps);
 
 	return buff;
 }
@@ -1530,7 +1562,7 @@ enable_pcap(port_info_t *info, uint32_t state)
 			pktgen_set_port_flags(info, SEND_PCAP_PKTS);
 		} else
 			pktgen_clr_port_flags(info, SEND_PCAP_PKTS);
-		pktgen_packet_rate(info);
+		pktgen_packet_rate_pps(info);
 	}
 }
 
@@ -2095,7 +2127,7 @@ pktgen_port_defaults(uint32_t pid, uint8_t seq)
 	info->prime_cnt         = DEFAULT_PRIME_COUNT;
 	info->delta             = 0;
 
-	pktgen_packet_rate(info);
+	pktgen_packet_rate_pps(info);
 
 	pkt->ip_mask = DEFAULT_NETMASK;
 	if ( (pid & 1) == 0) {
@@ -2327,7 +2359,7 @@ pktgen_set_port_seqCnt(port_info_t *info, uint32_t cnt)
 		pktgen_set_port_flags(info, SEND_SEQ_PKTS);
 	} else
 		pktgen_clr_port_flags(info, SEND_SEQ_PKTS);
-	pktgen_packet_rate(info);
+	pktgen_packet_rate_pps(info);
 }
 
 /**************************************************************************//**
@@ -2407,7 +2439,7 @@ single_set_tx_burst(port_info_t *info, uint32_t burst)
 	else if (burst > DEFAULT_PKT_BURST)
 		burst = DEFAULT_PKT_BURST;
 	info->tx_burst = burst;
-	pktgen_packet_rate(info);
+	pktgen_packet_rate_pps(info);
 }
 
 /**************************************************************************//**
@@ -2461,7 +2493,7 @@ single_set_pkt_size(port_info_t *info, uint16_t size)
 	pkt->pktSize = (size - ETHER_CRC_LEN);
 
 	pktgen_packet_ctor(info, SINGLE_PKT, -1);
-	pktgen_packet_rate(info);
+	pktgen_packet_rate_pps(info);
 }
 
 /**************************************************************************//**
@@ -2508,8 +2540,30 @@ single_set_tx_rate(port_info_t *info, const char *r)
 	else if (rate > 100.00)
 		rate = 100.00;
 	info->tx_rate = rate;
+	pktgen_packet_rate_pps(info);
+}
 
-	pktgen_packet_rate(info);
+/**************************************************************************//**
+ *
+ * single_set_tx_pps - Set the transmit pps as an integer.
+ *
+ * DESCRIPTION
+ * Set the transmit pps as an integer value for all ports listed.
+ *
+ * RETURNS: N/A
+ *
+ * SEE ALSO:
+ */
+
+void
+single_set_tx_pps(port_info_t *info, uint32_t pps)
+{
+	if (pps > 0)
+	    info->tx_pps = pps;
+	#ifdef DEBUG
+		printf("Called single_set_tx-pps. First entry point. Setting to %u.", pps);
+	#endif
+	pktgen_packet_pps(info);
 }
 
 /**************************************************************************//**
@@ -2596,7 +2650,7 @@ enable_range(port_info_t *info, uint32_t state)
 		pktgen_set_port_flags(info, SEND_RANGE_PKTS);
 	} else
 		pktgen_clr_port_flags(info, SEND_RANGE_PKTS);
-	pktgen_packet_rate(info);
+	pktgen_packet_rate_pps(info);
 }
 
 /**************************************************************************//**
