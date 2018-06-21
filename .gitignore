@@ -15,3 +15,4 @@ node_modules
 .vscode
 gulpfile.js
 .idea
+x86_64-native-linuxapp-gcc

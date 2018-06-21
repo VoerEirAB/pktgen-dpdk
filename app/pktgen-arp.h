@@ -12,10 +12,15 @@
 
 #include <rte_mbuf.h>
 
+#include "pktgen.h"
+#include "pktgen-cmds.h"
+#include "pktgen-log.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+void pktgen_dump_arp(FILE * fptr, arpPkt_t *arp, struct ether_hdr *eth);
 void pktgen_send_arp(uint32_t pid, uint32_t type, uint8_t seq_idx);
 void pktgen_process_arp(struct rte_mbuf *m, uint32_t pid, uint32_t vlan);
 
