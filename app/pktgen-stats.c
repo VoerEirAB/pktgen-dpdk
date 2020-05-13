@@ -100,6 +100,7 @@ pktgen_print_static_data(void)
 	ip_row = ++row;
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Pattern Type");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Tx Count/% Rate");
+	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "PPS");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Pkt Size/Tx Burst");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "TTL/Port Src/Dest");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Pkt Type:VLAN ID");
@@ -144,6 +145,9 @@ pktgen_print_static_data(void)
 
 		pktgen_display_set_color("stats.rate.count");
 		pktgen_transmit_count_rate(pid, buff, sizeof(buff));
+		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, buff);
+
+		pktgen_transmit_count_pps(pid, buff, sizeof(buff));
 		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, buff);
 
 		pktgen_display_set_color("stats.stat.values");
