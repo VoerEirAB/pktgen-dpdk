@@ -198,7 +198,7 @@ enum {
 	DEFAULT_PRIME_COUNT     = 1,
 	DEFAULT_SRC_PORT        = 1234,
 	DEFAULT_DST_PORT        = 5678,
-	DEFAULT_TTL		= 4,
+	DEFAULT_TTL		= 64,
 	DEFAULT_PKT_NUMBER      = 0x012345678,
 	DEFAULT_ACK_NUMBER      = 0x012345690,
 	DEFAULT_WND_SIZE        = 8192,
@@ -374,7 +374,7 @@ void pktgen_page_display(struct rte_timer *tim, void *arg);
 void pktgen_packet_ctor(port_info_t *info, int32_t seq_idx,
 			       int32_t type);
 void pktgen_packet_rate(port_info_t *info);
-
+void pktgen_packet_pps(port_info_t *info);
 void pktgen_send_mbuf(struct rte_mbuf *m, uint8_t pid, uint16_t qid);
 
 pkt_seq_t *pktgen_find_matching_ipsrc(port_info_t *info, uint32_t addr);
@@ -532,3 +532,4 @@ do_command(const char *cmd, int (*display)(char *, int)) {
 #endif
 
 #endif /* _PKTGEN_H_ */
+

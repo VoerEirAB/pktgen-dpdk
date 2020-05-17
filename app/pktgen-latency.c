@@ -71,6 +71,7 @@ pktgen_print_static_data(void)
 	ip_row = ++row;
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Pattern Type");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Tx Count/% Rate");
+	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "PPS");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "PktSize/Tx Burst");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Src/Dest Port");
 	scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Pkt Type:VLAN ID");
@@ -112,6 +113,8 @@ pktgen_print_static_data(void)
 		        (info->fill_pattern_type == ZERO_FILL_PATTERN) ? "Zero" :
 		        info->user_pattern);
 		pktgen_transmit_count_rate(pid, buff, sizeof(buff));
+		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, buff);
+		pktgen_transmit_count_pps(pid, buff, sizeof(buff));
 		scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, buff);
 
 		snprintf(buff, sizeof(buff), "%d /%5d", pkt->pktSize + PG_ETHER_CRC_LEN, info->tx_burst);

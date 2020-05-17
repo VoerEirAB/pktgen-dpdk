@@ -386,7 +386,8 @@ range_cmd(int argc, char **argv)
 			"seq_cnt|"		/* 11 */ \
 			"seqCnt|"		/* 12 */ \
 			"seqcnt|"		/* 13 */ \
-			"ttl"			/* 14 */
+			"ttl|"			/* 14 */ \
+			"pps"			/* 15 */
 
 static struct cli_map set_map[] = {
 	{ 10, "set %P %|" set_types " %d" },
@@ -414,6 +415,7 @@ static const char *set_help[] = {
 	"set <portlist> count <value>       - number of packets to transmit",
 	"set <portlist> size <value>        - size of the packet to transmit",
 	"set <portlist> rate <percent>      - Packet rate in percentage",
+	"set <portlist> pps <value>         - Packet per second value",
 	"set <portlist> burst <value>       - number of packets in a burst",
 	"set <portlist> tx_cycles <value>   - DEBUG to set the number of cycles per TX burst",
 	"set <portlist> sport <value>       - Source port number for TCP",
@@ -496,6 +498,7 @@ set_cmd(int argc, char **argv)
 						/* FALLTHRU */
 					case 13: pktgen_set_port_seqCnt(info, value); break;
 					case 14: single_set_ttl_value(info, value); break;
+					case 15: single_set_tx_pps(info, value); break;
 					default:
 						return cli_cmd_error("Set command is invalid", "Set", argc, argv);
 				}) );
@@ -2001,3 +2004,4 @@ help_cmd(int argc __rte_unused, char **argv __rte_unused)
 	}
 	return 0;
 }
+
