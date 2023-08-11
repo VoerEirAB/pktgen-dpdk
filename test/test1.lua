@@ -1,5 +1,6 @@
 package.path = package.path ..";?.lua;test/?.lua;app/?.lua;"
 
+require "Pktgen"
 -- A list of the test script for Pktgen and Lua.
 -- Each command somewhat mirrors the pktgen command line versions.
 -- A couple of the arguments have be changed to be more like the others.
@@ -67,5 +68,7 @@ pktgen.seqTable(0, "all", seqTable[0]);
 pktgen.seqTable(1, "all", seqTable[1]);
 pktgen.seqTable(2, "all", seqTable[2]);
 pktgen.seqTable(3, "all", seqTable[3]);
+
+pktgen.delay(1000)
 
 -- TODO: Need to create a pktgen.seqTableN("all", seqTable); like support

@@ -1,8 +1,6 @@
 *.o
 *.a
-*.cmd
 *.d
-*.map
 *~
 _install
 _postinstall
@@ -11,4 +9,13 @@ _postbuild
 _postclean
 lib/common/common/
 docs/build/
-
+.project
+.pydevproject
+node_modules
+.vscode
+gulpfile.js
+x86_64-*
+lib/lua/build
+Builddir/
+builddir/
+usr/local

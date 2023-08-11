@@ -1,35 +1,7 @@
 /*-
- * Copyright (c) <2016>, Intel Corporation
- * All rights reserved.
+ * Copyright(c) <2016-2023>, Intel Corporation. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * - Redistributions of source code must retain the above copyright
- *	 notice, this list of conditions and the following disclaimer.
- *
- * - Redistributions in binary form must reproduce the above copyright
- *	 notice, this list of conditions and the following disclaimer in
- *	 the documentation and/or other materials provided with the
- *	 distribution.
- *
- * - Neither the name of Intel Corporation nor the names of its
- *	 contributors may be used to endorse or promote products derived
- *	 from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 /* Created 2016 by Keith Wiles @ intel.com */
@@ -43,18 +15,40 @@
 extern "C" {
 #endif
 
-typedef struct {
-	uint64_t timestamp;
-	uint16_t magic;
-} latency_t;
+#define DEFAULT_JITTER_THRESHOLD (50)      /**< usec */
+#define DEFAULT_LATENCY_RATE     (10000)   /**< micro-seconds*/
+#define MAX_LATENCY_RATE         (1000000) /**< micro-seconds */
+#define DEFAULT_LATENCY_ENTROPY  (0)       /**< default value to use in (SPORT + (i % N))  */
+#define LATENCY_PKT_SIZE         72        /**< Packet size */
+#define LATENCY_DPORT            1028      /**< Reserved */
 
-#define LATENCY_MAGIC   (('L' << 8) + 'y')
-#define DEFAULT_JITTER_THRESHOLD    (50)	/**< usec */
+void pktgen_page_latency(void);
 
-extern void pktgen_page_latency(void);
+/**
+ *
+ * pktgen_latency_setup - Setup the default values for a latency port.
+ *
+ * DESCRIPTION
+ * Setup the default latency data for a given port.
+ *
+ * RETURNS: N/A
+ */
+void pktgen_latency_setup(port_info_t *info);
+
+/**
+ * latency_set_rate - Set the latency rate for a given port.
+ */
+void latency_set_rate(port_info_t *info, uint32_t value);
+
+/**
+ * latency_set_entropy - Set the entropy value for a given port.
+ *
+ * value - The entropy value can be 0 >= entropy <= 0xFFFF default to 0.
+ */
+void latency_set_entropy(port_info_t *info, uint16_t value);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* _PKTGEN_LATENCY_H_ */
+#endif /* _PKTGEN_LATENCY_H_ */

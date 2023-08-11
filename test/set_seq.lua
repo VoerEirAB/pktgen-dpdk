@@ -1,5 +1,7 @@
+package.path = package.path ..";?.lua;test/?.lua;app/?.lua;"
 -- Lua uses '--' as comment to end of line read the
 -- manual for more comment options.
+require "Pktgen"
 local seq_table = {			-- entries can be in any order
     ["eth_dst_addr"] = "0011:4455:6677",
     ["eth_src_addr"] = "0011:1234:5678",
@@ -10,8 +12,11 @@ local seq_table = {			-- entries can be in any order
     ["ethType"] = "ipv4",	-- ipv4|ipv6|vlan
     ["ipProto"] = "udp",	-- udp|tcp|icmp
     ["vlanid"] = 1,			-- 1 - 4095
-    ["pktSize"] = 128		-- 64 - 1518
+    ["pktSize"] = 128,		-- 64 - 1518
+    ["teid"] = 3,
+    ["cos"] = 5,
+    ["tos"] = 6
   };
 -- seqTable( seq#, portlist, table );
 pktgen.seqTable(0, "all", seq_table );
-pktgen.set("all", "seqCnt", 1);
+pktgen.set("all", "seq_cnt", 1);

@@ -1,75 +1,19 @@
 /*-
- * Copyright (c) <2010>, Intel Corporation
- * All rights reserved.
+ * Copyright(c) <2010-2023>, Intel Corporation. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * - Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
- *
- * - Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the
- *   distribution.
- *
- * - Neither the name of Intel Corporation nor the names of its
- *   contributors may be used to endorse or promote products derived
- *   from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
-/**
- * Copyright (c) <2010-2014>, Wind River Systems, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification, are
- * permitted provided that the following conditions are met:
- *
- * 1) Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2) Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation and/or
- * other materials provided with the distribution.
- *
- * 3) Neither the name of Wind River Systems nor the names of its contributors may be
- * used to endorse or promote products derived from this software without specific
- * prior written permission.
- *
- * 4) The screens displayed by the application must contain the copyright notice as defined
- * above and can not be removed without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
- * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
 /* Created 2010 by Keith Wiles @ intel.com */
+
+#include <cli_scrn.h>
+#include <lua_config.h>
 
 #include "pktgen.h"
 
 #include "pktgen-ipv6.h"
 
-/**************************************************************************//**
+/**
  *
  * pktgen_ipv6_ctor - IPv6 packet header constructor routine.
  *
@@ -82,30 +26,27 @@
  */
 
 void
-pktgen_ipv6_ctor(pkt_seq_t *pkt, ipv6Hdr_t *ip)
+pktgen_ipv6_ctor(pkt_seq_t *pkt, void *hdr)
 {
-	uint16_t tlen;
+    struct rte_ipv6_hdr *ip = hdr;
+    uint16_t tlen;
 
-	/* IPv6 Header constructor */
-	memset(ip, 0, sizeof(ipv6Hdr_t));
+    /* IPv6 Header constructor */
+    memset(ip, 0, sizeof(struct rte_ipv6_hdr));
 
-	ip->ver_tc_fl       = htonl(IPv6_VERSION << 28);
-	tlen                = pkt->pktSize -
-		(pkt->ether_hdr_size + sizeof(ipv6Hdr_t));
+    ip->vtc_flow = htonl(IPv6_VERSION << 28);
+    ip->vtc_flow |= htonl(pkt->traffic_class << RTE_IPV6_HDR_TC_SHIFT);
+    tlen = pkt->pktSize - (pkt->ether_hdr_size + sizeof(struct rte_ipv6_hdr));
 
-	ip->payload_length  = htons(tlen);
-	ip->hop_limit       = 4;
-	ip->next_header     = pkt->ipProto;
+    ip->payload_len = htons(tlen);
+    ip->hop_limits  = pkt->hop_limits;
+    ip->proto       = pkt->ipProto;
 
-	rte_memcpy(&ip->daddr[8],
-		   pkt->ip_dst_addr.addr.ipv6.s6_addr,
-		   sizeof(struct in6_addr));
-	rte_memcpy(&ip->saddr[8],
-		   pkt->ip_dst_addr.addr.ipv6.s6_addr,
-		   sizeof(struct in6_addr));
+    rte_memcpy(&ip->dst_addr, pkt->ip_dst_addr.addr.ipv6.s6_addr, sizeof(struct in6_addr));
+    rte_memcpy(&ip->src_addr, pkt->ip_src_addr.addr.ipv6.s6_addr, sizeof(struct in6_addr));
 }
 
-/**************************************************************************//**
+/**
  *
  * pktgen_process_ping6 - Process a IPv6 ICMP echo request packet.
  *
@@ -118,33 +59,32 @@ pktgen_ipv6_ctor(pkt_seq_t *pkt, ipv6Hdr_t *ip)
  */
 
 void
-pktgen_process_ping6(struct rte_mbuf *m __rte_unused,
-		     uint32_t pid __rte_unused, uint32_t vlan __rte_unused)
+pktgen_process_ping6(struct rte_mbuf *m __rte_unused, uint32_t pid __rte_unused,
+                     uint32_t qid __rte_unused, uint32_t vlan __rte_unused)
 {
-#if 0	/* Broken needs to be updated to do IPv6 packets */
+#if 0 /* Broken needs to be updated to do IPv6 packets */
 	port_info_t     *info = &pktgen.info[pid];
-	struct ether_hdr *eth = rte_pktmbuf_mtod(m, struct ether_hdr *);
-	ipv6Hdr_t       *ip = (ipv6Hdr_t *)&eth[1];
+	struct rte_ether_hdr *eth = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
+	struct rte_ipv6_hdr       *ip = (struct rte_ipv6_hdr *)&eth[1];
 
 	/* Adjust for a vlan header if present */
 	if (vlan)
-		ip = (ipv6Hdr_t *)((char *)ip + sizeof(struct vlan_hdr));
+		ip = (struct rte_ipv6_hdr *)((char *)ip + sizeof(struct rte_vlan_hdr));
 
 	/* Look for a ICMP echo requests, but only if enabled. */
 	if ( (rte_atomic32_read(&info->port_flags) & ICMP_ECHO_ENABLE_FLAG) &&
 	     (ip->next_header == PG_IPPROTO_ICMPV6) ) {
 #if !defined(RTE_ARCH_X86_64)
-		icmpv4Hdr_t *icmp =
-			(icmpv4Hdr_t *)((uint32_t)ip + sizeof(ipHdr_t));
+		struct rte_icmp_hdr *icmp =
+			(struct rte_icmp_hdr *)((uint32_t)ip + sizeof(struct rte_ipv4_hdr));
 #else
-		icmpv4Hdr_t *icmp =
-			(icmpv4Hdr_t *)((uint64_t)ip + sizeof(ipHdr_t));
+		struct rte_icmp_hdr *icmp =
+			(struct rte_icmp_hdr *)((uint64_t)ip + sizeof(struct rte_ipv4_hdr));
 #endif
 		/* We do not handle IP options, which will effect the IP header size. */
-		if (cksum(icmp,
-			  (m->pkt.data_len - sizeof(struct ether_hdr) -
-			   sizeof(ipHdr_t)),
-			  0) ) {
+		if (rte_ipv6_cksum(icmp,
+			  (m->pkt.data_len - sizeof(struct rte_ether_hdr) -
+			   sizeof(struct rte_ipv4_hdr))) ) {
 			rte_printf_status("ICMP checksum failed\n");
 			goto leave :
 		}
@@ -173,10 +113,10 @@ pktgen_process_ping6(struct rte_mbuf *m __rte_unused,
 			/* Recompute the ICMP checksum */
 			icmp->cksum = 0;
 			icmp->cksum =
-				cksum(icmp,
+				rte_raw_cksum(icmp,
 				      (m->pkt.data_len -
-				       sizeof(struct ether_hdr) -
-				       sizeof(ipHdr_t)), 0);
+				       sizeof(struct rte_ether_hdr) -
+				       sizeof(struct rte_ipv4_hdr)));
 
 			/* Swap the IP addresses. */
 			inetAddrSwap(&ip->src, &ip->dst);
@@ -186,12 +126,12 @@ pktgen_process_ping6(struct rte_mbuf *m __rte_unused,
 
 			/* Recompute the IP checksum */
 			ip->cksum   = 0;
-			ip->cksum   = cksum(ip, sizeof(ipHdr_t), 0);
+			ip->cksum   = rte_raw_cksum(ip, sizeof(struct rte_ipv4_hdr));
 
 			/* Swap the MAC addresses */
 			ethAddrSwap(&eth->d_addr, &eth->s_addr);
 
-			pktgen_send_mbuf(m, pid, 0);
+			rte_eth_tx_buffer(pid, 0, info->q[0].txbuff, m);
 
 			pktgen_set_q_flags(info, 0, DO_TX_FLUSH);
 

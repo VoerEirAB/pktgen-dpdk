@@ -1,111 +1,88 @@
 /*-
- * Copyright (c) <2010>, Intel Corporation
- * All rights reserved.
+ * Copyright(c) <2010-2023>, Intel Corporation. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * - Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
- *
- * - Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the
- *   distribution.
- *
- * - Neither the name of Intel Corporation nor the names of its
- *   contributors may be used to endorse or promote products derived
- *   from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
-/**
- * Copyright (c) <2010-2014>, Wind River Systems, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification, are
- * permitted provided that the following conditions are met:
- *
- * 1) Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2) Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation and/or
- * other materials provided with the distribution.
- *
- * 3) Neither the name of Wind River Systems nor the names of its contributors may be
- * used to endorse or promote products derived from this software without specific
- * prior written permission.
- *
- * 4) The screens displayed by the application must contain the copyright notice as defined
- * above and can not be removed without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
- * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 /* Created 2010 by Keith Wiles @ intel.com */
+
+#include <cli_scrn.h>
+#include "lua_config.h"
 
 #include "pktgen.h"
 
 #include "pktgen-udp.h"
 
-/**************************************************************************//**
+/**
  *
  * pktgen_udp_hdr_ctor - UDP header constructor routine.
  *
  * DESCRIPTION
  * Construct the UDP header in a packer buffer.
  *
- * RETURNS: N/A
+ * RETURNS: next header location
  *
  * SEE ALSO:
  */
 
-void
-pktgen_udp_hdr_ctor(pkt_seq_t *pkt, udpip_t *uip, int type __rte_unused)
+void *
+pktgen_udp_hdr_ctor(pkt_seq_t *pkt, void *hdr, int type)
 {
-	uint16_t tlen;
+    uint16_t tlen;
 
-	/* Zero out the header space */
-	memset((char *)uip, 0, sizeof(udpip_t));
+    if (type == RTE_ETHER_TYPE_IPV4) {
+        struct rte_ipv4_hdr *ipv4 = hdr;
+        struct rte_udp_hdr *udp   = (struct rte_udp_hdr *)&ipv4[1];
 
-	/* Create the UDP header */
-	uip->ip.src         = htonl(pkt->ip_src_addr.addr.ipv4.s_addr);
-	uip->ip.dst         = htonl(pkt->ip_dst_addr.addr.ipv4.s_addr);
-	tlen                = pkt->pktSize -
-		(pkt->ether_hdr_size + sizeof(ipHdr_t));
+        /* Create the UDP header */
+        ipv4->src_addr = htonl(pkt->ip_src_addr.addr.ipv4.s_addr);
+        ipv4->dst_addr = htonl(pkt->ip_dst_addr.addr.ipv4.s_addr);
 
-	uip->ip.len         = htons(tlen);
-	uip->ip.proto       = pkt->ipProto;
+        ipv4->version_ihl   = (IPv4_VERSION << 4) | (sizeof(struct rte_ipv4_hdr) / 4);
+        tlen                = pkt->pktSize - pkt->ether_hdr_size;
+        ipv4->total_length  = htons(tlen);
+        ipv4->next_proto_id = pkt->ipProto;
 
-	uip->udp.len        = htons(tlen);
-	uip->udp.sport      = htons(pkt->sport);
-	uip->udp.dport      = htons(pkt->dport);
+        tlen           = pkt->pktSize - (pkt->ether_hdr_size + sizeof(struct rte_ipv4_hdr));
+        udp->dgram_len = htons(tlen);
+        udp->src_port  = htons(pkt->sport);
+        udp->dst_port  = htons(pkt->dport);
 
-	/* Includes the pseudo header information */
-	tlen                = pkt->pktSize - pkt->ether_hdr_size;
+        if (pkt->dport == VXLAN_PORT_ID) {
+            struct vxlan *vxlan = (struct vxlan *)&udp[1];
 
-	uip->udp.cksum      = cksum(uip, tlen, 0);
-	if (uip->udp.cksum == 0)
-		uip->udp.cksum = 0xFFFF;
+            vxlan->vni_flags = htons(pkt->vni_flags);
+            vxlan->group_id  = htons(pkt->group_id);
+            vxlan->vxlan_id  = htonl(pkt->vxlan_id) << 8;
+        }
+
+        udp->dgram_cksum = 0;
+        udp->dgram_cksum = rte_ipv4_udptcp_cksum(ipv4, (const void *)udp);
+        if (udp->dgram_cksum == 0)
+            udp->dgram_cksum = 0xFFFF;
+    } else {
+        struct rte_ipv6_hdr *ipv6 = hdr;
+        struct rte_udp_hdr *udp   = (struct rte_udp_hdr *)&ipv6[1];
+
+        /* Create the pseudo header and TCP information */
+        memset(ipv6->dst_addr, 0, sizeof(struct in6_addr));
+        memset(ipv6->src_addr, 0, sizeof(struct in6_addr));
+        rte_memcpy(ipv6->dst_addr, &pkt->ip_dst_addr.addr.ipv6.s6_addr, sizeof(struct in6_addr));
+        rte_memcpy(ipv6->src_addr, &pkt->ip_src_addr.addr.ipv6.s6_addr, sizeof(struct in6_addr));
+
+        tlen              = pkt->pktSize - (pkt->ether_hdr_size + sizeof(struct rte_ipv6_hdr));
+        ipv6->payload_len = htons(tlen);
+        ipv6->proto       = pkt->ipProto;
+
+        udp->dgram_len = htons(tlen);
+        udp->src_port  = htons(pkt->sport);
+        udp->dst_port  = htons(pkt->dport);
+
+        udp->dgram_cksum = 0;
+        udp->dgram_cksum = rte_ipv6_udptcp_cksum(ipv6, (const void *)udp);
+        if (udp->dgram_cksum == 0)
+            udp->dgram_cksum = 0xFFFF;
+    }
+
+    /* Return the original pointer for IP ctor */
+    return hdr;
 }

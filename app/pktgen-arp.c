@@ -1,69 +1,14 @@
 /*-
- * Copyright (c) <2010>, Intel Corporation
- * All rights reserved.
+ * Copyright(c) <2010-2023>, Intel Corporation. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * - Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
- *
- * - Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the
- *   distribution.
- *
- * - Neither the name of Intel Corporation nor the names of its
- *   contributors may be used to endorse or promote products derived
- *   from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
-/**
- * Copyright (c) <2010-2014>, Wind River Systems, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification, are
- * permitted provided that the following conditions are met:
- *
- * 1) Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2) Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation and/or
- * other materials provided with the distribution.
- *
- * 3) Neither the name of Wind River Systems nor the names of its contributors may be
- * used to endorse or promote products derived from this software without specific
- * prior written permission.
- *
- * 4) The screens displayed by the application must contain the copyright notice as defined
- * above and can not be removed without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
- * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
 /* Created 2010 by Keith Wiles @ intel.com */
+
+#include <cli_scrn.h>
+#include <lua_config.h>
+#include <rte_arp.h>
 
 #include "pktgen-arp.h"
 
@@ -71,7 +16,35 @@
 #include "pktgen-cmds.h"
 #include "pktgen-log.h"
 
-/**************************************************************************//**
+void
+arp_pkt_dump(struct rte_mbuf *m)
+{
+    struct rte_ether_hdr *eth;
+    struct rte_arp_hdr *arp;
+    char dst[64], src[64];
+    char sip[64], tip[64];
+
+    eth = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
+    arp = rte_pktmbuf_mtod_offset(m, struct rte_arp_hdr *, sizeof(struct rte_ether_hdr));
+
+    printf("\nARP Packet Dump\n");
+
+    rte_ether_format_addr(dst, sizeof(dst), &eth->dst_addr);
+    rte_ether_format_addr(src, sizeof(src), &eth->src_addr);
+    printf("  Ethernet Header DST: %s, SRC: %s, Type: %04x\n", dst, src, ntohs(eth->ether_type));
+
+    printf("  ARP Header Type: %04x, Proto: %04x, hlen: %d, plen: %d, opcode: %d\n",
+           ntohs(arp->arp_hardware), ntohs(arp->arp_protocol), arp->arp_hlen, arp->arp_plen,
+           ntohs(arp->arp_opcode));
+
+    rte_ether_format_addr(dst, sizeof(dst), &arp->arp_data.arp_sha);
+    rte_ether_format_addr(src, sizeof(src), &arp->arp_data.arp_tha);
+    inet_ntop(AF_INET, &arp->arp_data.arp_sip, sip, sizeof(sip));
+    inet_ntop(AF_INET, &arp->arp_data.arp_tip, tip, sizeof(tip));
+    printf("  ARP Data Sender: %s-%s, Target: %s-%s\n", dst, sip, src, tip);
+}
+
+/**
  *
  * pktgen_send_arp - Send an ARP request packet.
  *
@@ -86,60 +59,57 @@
 void
 pktgen_send_arp(uint32_t pid, uint32_t type, uint8_t seq_idx)
 {
-	port_info_t       *info = &pktgen.info[pid];
-	pkt_seq_t         *pkt;
-	struct rte_mbuf   *m;
-	struct ether_hdr  *eth;
-	arpPkt_t          *arp;
-	uint32_t addr;
-	uint8_t qid = 0;
+    port_info_t *info = &pktgen.info[pid];
+    pkt_seq_t *pkt;
+    struct rte_mbuf *m;
+    struct rte_ether_hdr *eth;
+    struct rte_arp_hdr *arp;
+    uint32_t addr;
 
-	pkt = &info->seq_pkt[seq_idx];
-	m   = rte_pktmbuf_alloc(info->q[qid].special_mp);
-	if (unlikely(m == NULL) ) {
-		pktgen_log_warning("No packet buffers found");
-		return;
-	}
-	eth = rte_pktmbuf_mtod(m, struct ether_hdr *);
-	arp = (arpPkt_t *)&eth[1];
+    pkt = &info->seq_pkt[seq_idx];
+    m   = rte_pktmbuf_alloc(info->special_mp);
+    if (unlikely(m == NULL)) {
+        pktgen_log_warning("No packet buffers found");
+        return;
+    }
+    eth = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
+    arp = (struct rte_arp_hdr *)&eth[1];
 
-	/* src and dest addr */
-	memset(&eth->d_addr, 0xFF, 6);
-	ether_addr_copy(&pkt->eth_src_addr, &eth->s_addr);
-	eth->ether_type = htons(ETHER_TYPE_ARP);
+    /* src and dest addr */
+    memset(&eth->dst_addr, 0xFF, 6);
+    rte_ether_addr_copy(&pkt->eth_src_addr, &eth->src_addr);
+    eth->ether_type = htons(RTE_ETHER_TYPE_ARP);
 
-	memset(arp, 0, sizeof(arpPkt_t));
+    memset(arp, 0, sizeof(struct rte_arp_hdr));
 
-	rte_memcpy(&arp->sha, &pkt->eth_src_addr, 6);
-	addr = htonl(pkt->ip_src_addr.addr.ipv4.s_addr);
-	inetAddrCopy(&arp->spa, &addr);
+    rte_memcpy(&arp->arp_data.arp_sha, &pkt->eth_src_addr, 6);
+    addr = htonl(pkt->ip_src_addr.addr.ipv4.s_addr);
+    inetAddrCopy(&arp->arp_data.arp_sip, &addr);
 
-	if (likely(type == GRATUITOUS_ARP) ) {
-		rte_memcpy(&arp->tha, &pkt->eth_src_addr, 6);
-		addr = htonl(pkt->ip_src_addr.addr.ipv4.s_addr);
-		inetAddrCopy(&arp->tpa, &addr);
-	} else {
-		memset(&arp->tha, 0, 6);
-		addr = htonl(pkt->ip_dst_addr.addr.ipv4.s_addr);
-		inetAddrCopy(&arp->tpa, &addr);
-	}
+    if (likely(type == GRATUITOUS_ARP)) {
+        rte_memcpy(&arp->arp_data.arp_tha, &pkt->eth_src_addr, 6);
+        addr = htonl(pkt->ip_src_addr.addr.ipv4.s_addr);
+        inetAddrCopy(&arp->arp_data.arp_tip, &addr);
+    } else {
+        memset(&arp->arp_data.arp_tha, 0, 6);
+        addr = htonl(pkt->ip_dst_addr.addr.ipv4.s_addr);
+        inetAddrCopy(&arp->arp_data.arp_tip, &addr);
+    }
 
-	/* Fill in the rest of the ARP packet header */
-	arp->hrd    = htons(ETH_HW_TYPE);
-	arp->pro    = htons(ETHER_TYPE_IPv4);
-	arp->hln    = 6;
-	arp->pln    = 4;
-	arp->op     = htons(ARP_REQUEST);
+    /* Fill in the rest of the ARP packet header */
+    arp->arp_hardware = htons(ETH_HW_TYPE);
+    arp->arp_protocol = htons(RTE_ETHER_TYPE_IPV4);
+    arp->arp_hlen     = 6;
+    arp->arp_plen     = 4;
+    arp->arp_opcode   = htons(ARP_REQUEST);
 
-	m->pkt_len  = 60;
-	m->data_len = 60;
+    m->pkt_len  = 60;
+    m->data_len = 60;
 
-	pktgen_send_mbuf(m, pid, qid);
-
-	pktgen_set_q_flags(info, qid, DO_TX_FLUSH);
+    rte_eth_tx_buffer(pid, 0, info->q[0].txbuff, m);
 }
 
-/**************************************************************************//**
+/**
  *
  * pktgen_process_arp - Handle a ARP request input packet and send a response.
  *
@@ -152,85 +122,88 @@ pktgen_send_arp(uint32_t pid, uint32_t type, uint8_t seq_idx)
  */
 
 void
-pktgen_process_arp(struct rte_mbuf *m, uint32_t pid, uint32_t vlan)
+pktgen_process_arp(struct rte_mbuf *m, uint32_t pid, uint32_t qid, uint32_t vlan)
 {
-	port_info_t   *info = &pktgen.info[pid];
-	pkt_seq_t     *pkt;
-	struct ether_hdr *eth = rte_pktmbuf_mtod(m, struct ether_hdr *);
-	arpPkt_t      *arp = (arpPkt_t *)&eth[1];
+    port_info_t *info         = &pktgen.info[pid];
+    pkt_seq_t *pkt            = NULL;
+    struct rte_ether_hdr *eth = rte_pktmbuf_mtod(m, struct rte_ether_hdr *);
+    struct rte_arp_hdr *arp   = (struct rte_arp_hdr *)&eth[1];
 
-	/* Adjust for a vlan header if present */
-	if (vlan)
-		arp = (arpPkt_t *)((char *)arp + sizeof(struct vlan_hdr));
+    /* Adjust for a vlan header if present */
+    if (vlan)
+        arp = (struct rte_arp_hdr *)((char *)arp + sizeof(struct rte_vlan_hdr));
 
-	/* Process all ARP requests if they are for us. */
-	if (arp->op == htons(ARP_REQUEST) ) {
-		if ((rte_atomic32_read(&info->port_flags) &
-		     PROCESS_GARP_PKTS) &&
-		    (arp->tpa._32 == arp->spa._32) ) {	/* Must be a GARP packet */
-			pkt = pktgen_find_matching_ipdst(info, arp->spa._32);
+    /* Process all ARP requests if they are for us. */
+    if (arp->arp_opcode == htons(ARP_REQUEST)) {
+        int idx;
 
-			/* Found a matching packet, replace the dst address */
-			if (pkt) {
-				rte_memcpy(&pkt->eth_dst_addr, &arp->sha, 6);
-				pktgen_set_q_flags(info,
-						   get_txque(pktgen.l2p,
-							     rte_lcore_id(),
-							     pid),
-						   DO_TX_FLUSH);
-				pktgen_redisplay(0);
-			}
-			return;
-		}
+        if (arp->arp_data.arp_tip == arp->arp_data.arp_sip) { /* GARP Packet */
+            idx = pktgen_find_matching_ipdst(info, arp->arp_data.arp_sip);
 
-		pkt = pktgen_find_matching_ipsrc(info, arp->tpa._32);
+            /* Found a matching packet, replace the dst address */
+            if (idx >= 0) {
+                rte_memcpy(&pkt->eth_dst_addr, &arp->arp_data.arp_sha, 6);
+                pktgen_clear_display();
+            }
+            return;
+        }
 
-		/* ARP request not for this interface. */
-		if (likely(pkt != NULL) ) {
-			/* Grab the source MAC address as the destination address for the port. */
-			if (unlikely(pktgen.flags & MAC_FROM_ARP_FLAG) ) {
-				uint32_t i;
+        idx = pktgen_find_matching_ipsrc(info, arp->arp_data.arp_tip);
 
-				rte_memcpy(&pkt->eth_dst_addr, &arp->sha, 6);
-				for (i = 0; i < info->seqCnt; i++)
-					pktgen_packet_ctor(info, i, -1);
-			}
+        /* ARP request not for this interface. */
+        if (likely(idx >= 0)) {
+            struct rte_mbuf *m1;
 
-			/* Swap the two MAC addresses */
-			ethAddrSwap(&arp->sha, &arp->tha);
+            pkt = &info->seq_pkt[idx];
+            m1  = rte_pktmbuf_copy(m, info->special_mp, 0, UINT32_MAX);
+            if (unlikely(m1 == NULL))
+                return;
+            eth = rte_pktmbuf_mtod(m1, struct rte_ether_hdr *);
+            arp = (struct rte_arp_hdr *)&eth[1];
 
-			/* Swap the two IP addresses */
-			inetAddrSwap(&arp->tpa._32, &arp->spa._32);
+            /* Grab the source MAC address as the destination address for the port. */
+            if (unlikely(pktgen.flags & MAC_FROM_ARP_FLAG)) {
+                rte_memcpy(&pkt->eth_dst_addr, &arp->arp_data.arp_sha, 6);
+                for (uint32_t i = 0; i < info->seqCnt; i++)
+                    pktgen_packet_ctor(info, i, -1);
+            }
 
-			/* Set the packet to ARP reply */
-			arp->op = htons(ARP_REPLY);
+            /* Swap the two MAC addresses */
+            ethAddrSwap(&arp->arp_data.arp_sha, &arp->arp_data.arp_tha);
 
-			/* Swap the MAC addresses */
-			ethAddrSwap(&eth->d_addr, &eth->s_addr);
+            /* Swap the two IP addresses */
+            inetAddrSwap(&arp->arp_data.arp_tip, &arp->arp_data.arp_sip);
 
-			/* Copy in the MAC address for the reply. */
-			rte_memcpy(&arp->sha, &pkt->eth_src_addr, 6);
-			rte_memcpy(&eth->s_addr, &pkt->eth_src_addr, 6);
+            /* Set the packet to ARP reply */
+            arp->arp_opcode = htons(ARP_REPLY);
 
-			pktgen_send_mbuf(m, pid, 0);
+            /* Swap the MAC addresses */
+            ethAddrSwap(&eth->dst_addr, &eth->src_addr);
 
-			/* Flush all of the packets in the queue. */
-			pktgen_set_q_flags(info, 0, DO_TX_FLUSH);
+            /* Copy in the MAC address for the reply. */
+            rte_memcpy(&arp->arp_data.arp_sha, &pkt->eth_src_addr, 6);
+            rte_memcpy(&eth->src_addr, &pkt->eth_src_addr, 6);
 
-			/* No need to free mbuf as it was reused */
-			return;
-		}
-	} else if (arp->op == htons(ARP_REPLY) ) {
-		pkt = pktgen_find_matching_ipsrc(info, arp->tpa._32);
+            m1->ol_flags = 0;
 
-		/* ARP request not for this interface. */
-		if (likely(pkt != NULL) ) {
-			/* Grab the real destination MAC address */
-			if (pkt->ip_dst_addr.addr.ipv4.s_addr ==
-			    ntohl(arp->spa._32) )
-				rte_memcpy(&pkt->eth_dst_addr, &arp->sha, 6);
+            rte_eth_tx_buffer(info->pid, qid, info->q[qid].txbuff, m1);
+            rte_eth_tx_buffer_flush(info->pid, qid, info->q[qid].txbuff);
+            return;
+        }
+    } else if (arp->arp_opcode == htons(ARP_REPLY)) {
+        int idx;
 
-			pktgen.flags |= PRINT_LABELS_FLAG;
-		}
-	}
+        idx = pktgen_find_matching_ipsrc(info, arp->arp_data.arp_tip);
+
+        /* ARP request not for this interface. */
+        if (likely(idx >= 0)) {
+            pkt = &info->seq_pkt[idx];
+
+            /* Grab the real destination MAC address */
+            if (pkt->ip_dst_addr.addr.ipv4.s_addr == ntohl(arp->arp_data.arp_sip))
+                rte_memcpy(&pkt->eth_dst_addr, &arp->arp_data.arp_sha, 6);
+
+            pktgen.flags |= PRINT_LABELS_FLAG;
+        }
+    }
 }

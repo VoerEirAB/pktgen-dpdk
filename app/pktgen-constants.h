@@ -1,67 +1,7 @@
 /*-
- * Copyright (c) <2010>, Intel Corporation
- * All rights reserved.
+ * Copyright(c) <2010-2023>, Intel Corporation. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * - Redistributions of source code must retain the above copyright
- *	 notice, this list of conditions and the following disclaimer.
- *
- * - Redistributions in binary form must reproduce the above copyright
- *	 notice, this list of conditions and the following disclaimer in
- *	 the documentation and/or other materials provided with the
- *	 distribution.
- *
- * - Neither the name of Intel Corporation nor the names of its
- *	 contributors may be used to endorse or promote products derived
- *	 from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
-/**
- * Copyright (c) <2010-2014>, Wind River Systems, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification, are
- * permitted provided that the following conditions are met:
- *
- * 1) Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2) Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation and/or
- * other materials provided with the distribution.
- *
- * 3) Neither the name of Wind River Systems nor the names of its contributors may be
- * used to endorse or promote products derived from this software without specific
- * prior written permission.
- *
- * 4) The screens displayed by the application must contain the copyright notice as defined
- * above and can not be removed without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- *	AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
- * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 /* Created 2010 by Keith Wiles @ intel.com */
 
@@ -75,29 +15,35 @@ extern "C" {
 #endif
 
 enum {
-	DEFAULT_PKT_BURST       = 32,	/* Increasing this number consumes memory very fast */
-#ifdef RTE_LIBRTE_VMXNET3_PMD
-	DEFAULT_RX_DESC         = (DEFAULT_PKT_BURST * 8 * 2),
-	DEFAULT_TX_DESC         = DEFAULT_RX_DESC * 2,
-#else
-	DEFAULT_RX_DESC         = (DEFAULT_PKT_BURST * 8),
-	DEFAULT_TX_DESC         = DEFAULT_RX_DESC * 2,
-#endif
+    MAX_PKT_RX_BURST     = 128, /* Used to create Max array sizes */
+    MAX_PKT_TX_BURST     = 128, /* Used to create Max array sizes */
+    DEFAULT_PKT_RX_BURST = 64,  /* Increasing this number consumes memory very fast */
+    DEFAULT_PKT_TX_BURST = 64,  /* Increasing this number consumes memory very fast */
+    DEFAULT_RX_DESC      = (MAX_PKT_RX_BURST * 8),
+    DEFAULT_TX_DESC      = (MAX_PKT_TX_BURST * 16),
 
-	MAX_MBUFS_PER_PORT      = (DEFAULT_TX_DESC * 8),/* number of buffers to support per port */
-	MAX_SPECIAL_MBUFS       = 64,
-	MBUF_CACHE_SIZE         = (MAX_MBUFS_PER_PORT / 8),
+    MAX_MBUFS_PER_PORT =
+        ((DEFAULT_RX_DESC + DEFAULT_TX_DESC) * 8), /* number of buffers to support per port */
+    MAX_SPECIAL_MBUFS = 1024,
+    MBUF_CACHE_SIZE   = 128,
 
-	DEFAULT_BUFF_SIZE       = 2048,
-	DEFAULT_PRIV_SIZE       = 0,
-	MBUF_SIZE               =
-		(DEFAULT_BUFF_SIZE - sizeof(struct rte_mbuf) - DEFAULT_PRIV_SIZE),
+    DEFAULT_PRIV_SIZE = 0,
 
-	NUM_Q                   = 8,	/**< Number of cores per port. */
+    NUM_Q = 64, /**< Number of queues per port. */
 };
+
+/*
+ * Some NICs require >= 2KB buffer as a receive data buffer. DPDK uses 2KB + HEADROOM (128) as
+ * the default MBUF buffer size. This would make the pktmbuf buffer 2KB + HEADROOM +
+ * sizeof(rte_mbuf) which is 2048 + 128 + 128 = 2304 mempool buffer size.
+ *
+ * For Jumbo frame buffers lets use MTU 9216 + CRC(4) + L2(14) = 9234, for buffer size we use 10KB
+ */
+#define _MBUF_LEN         (PG_JUMBO_FRAME_LEN + RTE_PKTMBUF_HEADROOM + sizeof(struct rte_mbuf))
+#define DEFAULT_MBUF_SIZE (10 * 1024)
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* _PKTGEN_CONSTANTS_H_ */
+#endif /* _PKTGEN_CONSTANTS_H_ */

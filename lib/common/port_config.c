@@ -1,40 +1,11 @@
 /*-
- * Copyright (c) <2014-2017>, Intel Corporation
- * All rights reserved.
+ * Copyright(c) <2014-2023>, Intel Corporation. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * - Redistributions of source code must retain the above copyright
- *   notice, this list of conditions and the following disclaimer.
- *
- * - Redistributions in binary form must reproduce the above copyright
- *   notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the
- *   distribution.
- *
- * - Neither the name of Intel Corporation nor the names of its
- *   contributors may be used to endorse or promote products derived
- *   from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
- * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
- * OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 
 /* Created 2014 by Keith Wiles @ intel.com */
 
-#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -54,13 +25,12 @@
 #include <rte_devargs.h>
 #include <rte_debug.h>
 
-#include "scrn.h"
 #include "port_config.h"
 #include "core_info.h"
 
-#define PORT_STRING_SIZE    256
+#define PORT_STRING_SIZE 256
 
-/**************************************************************************//**
+/**
  *
  * get_portdesc - Parse the lspci command output to find ports.
  *
@@ -73,72 +43,69 @@
  */
 
 uint32_t
-get_portdesc(struct rte_pci_addr *pciAddr,
-	     uint8_t **portdesc,
-	     uint32_t num,
-	     int verbose)
+get_portdesc(struct rte_pci_addr *pciAddr, uint8_t **portdesc, uint32_t num, int verbose)
 {
-	FILE *fd;
-	uint32_t idx;
-	char buff[PORT_STRING_SIZE], *p;
+    FILE *fd;
+    uint32_t idx;
+    char buff[PORT_STRING_SIZE], *p;
 
-	if ( (num <= 0) || (pciAddr == NULL) || (portdesc == NULL) )
-		return 0;
+    if ((num <= 0) || (pciAddr == NULL) || (portdesc == NULL))
+        return 0;
 
-	/* Only parse the Ethernet cards on the PCI bus. */
-	fd = popen("lspci -D | grep Ethernet", "r");
-	if (fd == NULL)
-		rte_panic("*** Unable to do lspci may need to be installed");
+    /* Only parse the Ethernet cards on the PCI bus. */
+    fd = popen("lspci -D | grep Ethernet", "r");
+    if (fd == NULL)
+        rte_panic("*** Unable to do lspci may need to be installed");
 
-	if (verbose)
-		fprintf(stdout, "\n** Bit Mask: All ports in system\n");
+    if (verbose)
+        fprintf(stdout, "\n** Bit Mask: All ports in system\n");
 
-	idx = 0;
-	while (fgets(buff, sizeof(buff), fd) ) {
-		p = &buff[0];
+    idx = 0;
+    while (fgets(buff, sizeof(buff), fd)) {
+        p = &buff[0];
 
-		/* add a null at the end of the string. */
-		p[strlen(buff) - 1] = 0;
+        /* add a null at the end of the string. */
+        p[strlen(buff) - 1] = 0;
 
-		/* Decode the 0000:00:00.0 PCI device address. */
-		pciAddr[idx].domain     = strtol(p, &p, 16);
-		p++;
-		pciAddr[idx].bus        = strtol(p, &p, 16);
-		p++;
-		pciAddr[idx].devid      = strtol(p, &p, 16);
-		p++;
-		pciAddr[idx].function   = strtol(p, &p, 16);
+        /* Decode the 0000:00:00.0 PCI device address. */
+        pciAddr[idx].domain = strtol(p, &p, 16);
+        p++;
+        pciAddr[idx].bus = strtol(p, &p, 16);
+        p++;
+        pciAddr[idx].devid = strtol(p, &p, 16);
+        p++;
+        pciAddr[idx].function = strtol(p, &p, 16);
 
-		if (verbose)
-			fprintf(stdout, " 0x%016llx: %s\n", (1ULL << idx),
-				buff);
+        if (verbose)
+            fprintf(stdout, " 0x%016" PRIx64 ": %s\n", (1UL << idx), buff);
 
-		/* Save the port description for later if asked to do so. */
-		if (portdesc) {
-			const char *s = "ethernet controller";
-			int n = strlen(s);
+        /* Save the port description for later if asked to do so. */
+        if (portdesc) {
+            const char *s = "ethernet controller";
+            int n         = strlen(s);
 
-			p = strcasestr(buff, s);
-			if (p)
-				memmove(p, p + n, (strlen(buff) - ((p - buff) + n)) + 1);
-			p = strcasestr(buff, s);
-			n++;
-			if (p)	/* Try to remove the two strings to make the line shorter */
-				memmove(p, p + n, (strlen(buff) - ((p - buff) + n)) + 1);
-			portdesc[idx] = (uint8_t *)strdup(buff);/* portdesc[idx] needs to be NULL or we lose memory. */
-		}
-		if (++idx >= num)
-			break;
-	}
+            p = strcasestr(buff, s);
+            if (p)
+                memmove(p, p + n, (strlen(buff) - ((p - buff) + n)) + 1);
+            p = strcasestr(buff, s);
+            n++;
+            if (p) /* Try to remove the two strings to make the line shorter */
+                memmove(p, p + n, (strlen(buff) - ((p - buff) + n)) + 1);
+            portdesc[idx] =
+                (uint8_t *)strdup(buff); /* portdesc[idx] needs to be NULL or we lose memory. */
+        }
+        if (++idx >= num)
+            break;
+    }
 
-	pclose(fd);
-	if (verbose)
-		fprintf(stdout, "\nFound %d ports\n", idx);
+    pclose(fd);
+    if (verbose)
+        fprintf(stdout, "\nFound %d ports\n", idx);
 
-	return idx;
+    return idx;
 }
 
-/**************************************************************************//**
+/**
  *
  * free_portdesc - Free the allocated memory for port descriptions.
  *
@@ -153,21 +120,21 @@ get_portdesc(struct rte_pci_addr *pciAddr,
 void
 free_portdesc(uint8_t **portdesc, uint32_t num)
 {
-	uint32_t i;
+    uint32_t i;
 
-	for (i = 0; i < num; i++) {
-		if (portdesc[i])
-			free((char *)portdesc[i]);
-		portdesc[i] = NULL;
-	}
+    for (i = 0; i < num; i++) {
+        if (portdesc[i])
+            free((char *)portdesc[i]);
+        portdesc[i] = NULL;
+    }
 }
 
-/**************************************************************************//**
+/**
  *
- * create_blacklist - Create a port blacklist.
+ * create_blocklist - Create a port blocklist.
  *
  * DESCRIPTION
- * Create a port blacklist from the port and port descriptions.
+ * Create a port blocklist from the port and port descriptions.
  *
  * RETURNS: Number of ports in list.
  *
@@ -175,38 +142,33 @@ free_portdesc(uint8_t **portdesc, uint32_t num)
  */
 
 uint32_t
-create_blacklist(uint64_t portmask,
-		 struct rte_pci_addr *portlist,
-		 uint32_t port_cnt,
-		 uint8_t *desc[]) {
-	uint32_t i, idx;
-	char pci_addr_str[32];
+create_blocklist(uint64_t portmask, struct rte_pci_addr *portlist, uint32_t port_cnt,
+                 uint8_t *desc[])
+{
+    uint32_t i, idx;
+    char pci_addr_str[32];
 
-	if ( (portmask == 0) || (portlist == NULL) || (port_cnt == 0) ||
-	     (desc == NULL) )
-		return 0;
+    if ((portmask == 0) || (portlist == NULL) || (port_cnt == 0) || (desc == NULL))
+        return 0;
 
-	fprintf(stdout,
-		"Ports: Port Mask: %016lx blacklisted = --, not-blacklisted = ++\n",
-		portmask);
-	idx = 0;
-	for (i = 0; i < port_cnt; i++) {
-		memset(pci_addr_str, 0, sizeof(pci_addr_str));
-		if ( (portmask & (1ULL << i)) == 0) {
-			fprintf(stdout, "-- %s\n", desc[i]);
-			strncpy(pci_addr_str, (void *)desc[i], 12);
-			rte_eal_devargs_add(RTE_DEVTYPE_BLACKLISTED_PCI,
-					    pci_addr_str);
-			idx++;
-		} else {
-			strncpy(pci_addr_str, (void *)desc[i], 12);
-			rte_eal_devargs_add(RTE_DEVTYPE_WHITELISTED_PCI,
-					    pci_addr_str);
-			fprintf(stdout, "++ %s\n", desc[i]);
-		}
-	}
-	if (desc)
-		fprintf(stdout, "\n");
+    fprintf(stdout, "Ports: Port Mask: %016" PRIx64 " blocklisted = --, not-blocklisted = ++\n",
+            portmask);
+    idx = 0;
+    for (i = 0; i < port_cnt; i++) {
+        memset(pci_addr_str, 0, sizeof(pci_addr_str));
+        if ((portmask & (1UL << i)) == 0) {
+            fprintf(stdout, "-- %s\n", desc[i]);
+            snprintf(pci_addr_str, sizeof(pci_addr_str), "%s", desc[i]);
+            rte_devargs_add(RTE_DEVTYPE_BLOCKED, pci_addr_str);
+            idx++;
+        } else {
+            snprintf(pci_addr_str, sizeof(pci_addr_str), "%s", desc[i]);
+            rte_devargs_add(RTE_DEVTYPE_ALLOWED, pci_addr_str);
+            fprintf(stdout, "++ %s\n", desc[i]);
+        }
+    }
+    if (desc)
+        fprintf(stdout, "\n");
 
-	return idx;
+    return idx;
 }

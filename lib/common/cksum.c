@@ -1,33 +1,7 @@
-/**
- * Copyright (c) <2010-2014>, Wind River Systems, Inc. All rights reserved.
+/*-
+ *   Copyright(c) <2014-2023>, Intel Corporation. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without modification, are
- * permitted provided that the following conditions are met:
- *
- * 1) Redistributions of source code must retain the above copyright notice,
- * this list of conditions and the following disclaimer.
- *
- * 2) Redistributions in binary form must reproduce the above copyright notice,
- * this list of conditions and the following disclaimer in the documentation and/or
- * other materials provided with the distribution.
- *
- * 3) Neither the name of Wind River Systems nor the names of its contributors may be
- * used to endorse or promote products derived from this software without specific
- * prior written permission.
- *
- * 4) The screens displayed by the applcation must contain the copyright notice as defined
- * above and can not be removed without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- *  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
- * USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * SPDX-License-Identifier: BSD-3-Clause
  */
 /* Created 2010 by Keith Wiles @ intel.com */
 
@@ -77,7 +51,6 @@
 #include <rte_cycles.h>
 #include <rte_prefetch.h>
 #include <rte_lcore.h>
-#include <rte_per_lcore.h>
 #include <rte_branch_prediction.h>
 #include <rte_pci.h>
 #include <rte_random.h>
@@ -94,15 +67,14 @@
 #include <rte_errno.h>
 
 #include "copyright_info.h"
+#include "pg_compat.h"
 #include "port_config.h"
 
-#include "scrn.h"
-#include "inet.h"
-#include "cycles.h"
+#include "pg_inet.h"
 #include "mbuf.h"
 #include "cksum.h"
 
-/**************************************************************************//**
+/**
  * cksum - Compute a 16 bit ones complement checksum value.
  *
  * DESCRIPTION
@@ -124,10 +96,10 @@
 uint16_t
 cksum(void *pBuf, int32_t size, uint32_t cksum)
 {
-	return cksumDone(cksumUpdate(pBuf, size, cksum) );
+    return cksumDone(cksumUpdate(pBuf, size, cksum));
 }
 
-/**************************************************************************//**
+/**
  * cksumUpdate - Calaculate an 16 bit checksum and return the 32 bit value
  *
  * DESCRIPTION
@@ -150,32 +122,40 @@ cksum(void *pBuf, int32_t size, uint32_t cksum)
 uint32_t
 cksumUpdate(void *pBuf, int32_t size, uint32_t cksum)
 {
-	uint32_t nWords;
-	uint16_t     *pWd = (uint16_t *)pBuf;
+    uint32_t nWords;
+    uint16_t *pWd = (uint16_t *)pBuf;
 
-	for (nWords = (size >> 5); nWords > 0; nWords--) {
-		cksum += *pWd++; cksum += *pWd++; cksum += *pWd++;
-		cksum += *pWd++;
-		cksum += *pWd++; cksum += *pWd++; cksum += *pWd++;
-		cksum += *pWd++;
-		cksum += *pWd++; cksum += *pWd++; cksum += *pWd++;
-		cksum += *pWd++;
-		cksum += *pWd++; cksum += *pWd++; cksum += *pWd++;
-		cksum += *pWd++;
-	}
+    for (nWords = (size >> 5); nWords > 0; nWords--) {
+        cksum += *pWd++;
+        cksum += *pWd++;
+        cksum += *pWd++;
+        cksum += *pWd++;
+        cksum += *pWd++;
+        cksum += *pWd++;
+        cksum += *pWd++;
+        cksum += *pWd++;
+        cksum += *pWd++;
+        cksum += *pWd++;
+        cksum += *pWd++;
+        cksum += *pWd++;
+        cksum += *pWd++;
+        cksum += *pWd++;
+        cksum += *pWd++;
+        cksum += *pWd++;
+    }
 
-	/* handle the odd number size */
-	for (nWords = (size & 0x1f) >> 1; nWords > 0; nWords--)
-		cksum   += *pWd++;
+    /* handle the odd number size */
+    for (nWords = (size & 0x1f) >> 1; nWords > 0; nWords--)
+        cksum += *pWd++;
 
-	/* Handle the odd byte length */
-	if (size & 1)
-		cksum   += *pWd & htons(0xFF00);
+    /* Handle the odd byte length */
+    if (size & 1)
+        cksum += *pWd & htons(0xFF00);
 
-	return cksum;
+    return cksum;
 }
 
-/**************************************************************************//**
+/**
  * cksumDone - Finish up the ckecksum value by folding the checksum.
  *
  * DESCRIPTION
@@ -194,14 +174,14 @@ cksumUpdate(void *pBuf, int32_t size, uint32_t cksum)
 uint16_t
 cksumDone(uint32_t cksum)
 {
-	/* Fold at most twice */
-	cksum = (cksum & 0xFFFF) + (cksum >> 16);
-	cksum = (cksum & 0xFFFF) + (cksum >> 16);
+    /* Fold at most twice */
+    cksum = (cksum & 0xFFFF) + (cksum >> 16);
+    cksum = (cksum & 0xFFFF) + (cksum >> 16);
 
-	return ~((uint16_t)cksum);
+    return ~((uint16_t)cksum);
 }
 
-/**************************************************************************//**
+/**
  * pseudoChecksum - Compute the Pseudo Header checksum.
  *
  * DESCRIPTION
@@ -222,16 +202,14 @@ cksumDone(uint32_t cksum)
  * ERRNO: N/A
  */
 uint32_t
-pseudoChecksum(uint32_t src, uint32_t dst, uint16_t pro, uint16_t len,
-	       uint32_t sum)
+pseudoChecksum(uint32_t src, uint32_t dst, uint16_t pro, uint16_t len, uint32_t sum)
 {
-	/* Compute the Pseudo Header checksum */
-	return sum + (src & 0xFFFF) + (src >> 16) + (dst & 0xFFFF) +
-	       (dst >> 16) +
-	       ntohs(len) + ntohs(pro);
+    /* Compute the Pseudo Header checksum */
+    return sum + (src & 0xFFFF) + (src >> 16) + (dst & 0xFFFF) + (dst >> 16) + ntohs(len) +
+           ntohs(pro);
 }
 
-/**************************************************************************//**
+/**
  * pseudoIPv6Checksum - Compute the Pseudo Header checksum.
  *
  * DESCRIPTION
@@ -252,19 +230,15 @@ pseudoChecksum(uint32_t src, uint32_t dst, uint16_t pro, uint16_t len,
  * ERRNO: N/A
  */
 uint32_t
-pseudoIPv6Checksum(uint16_t *src,
-		   uint16_t *dst,
-		   uint8_t next_hdr,
-		   uint32_t total_len,
-		   uint32_t sum)
+pseudoIPv6Checksum(uint16_t *src, uint16_t *dst, uint8_t next_hdr, uint32_t total_len, uint32_t sum)
 {
-	uint32_t len = htonl(total_len), i;
+    uint32_t len = htonl(total_len), i;
 
-	sum = (sum + (uint16_t)next_hdr + (len & 0xFFFF) + (len >> 16));
+    sum = (sum + (uint16_t)next_hdr + (len & 0xFFFF) + (len >> 16));
 
-	for (i = 0; i < 8; i++) {
-		sum += src[i];
-		sum += dst[i];
-	}
-	return sum;
+    for (i = 0; i < 8; i++) {
+        sum += src[i];
+        sum += dst[i];
+    }
+    return sum;
 }
