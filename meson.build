@@ -25,8 +25,9 @@ endif
 if get_option('enable-avx') and cc.has_argument('-mavx')
     add_project_arguments('-mavx', language: 'c')
 endif
+# https://stackoverflow.com/a/67632436/17683003
 if get_option('enable-avx2') and cc.has_argument('-mavx2')
-	add_project_arguments('-mavx2', language: 'c')
+	add_project_arguments('-mavx', language: 'c')
 endif
 add_project_arguments('-DALLOW_EXPERIMENTAL_API', language: 'c')
 add_project_arguments('-D_GNU_SOURCE', language: 'c')
