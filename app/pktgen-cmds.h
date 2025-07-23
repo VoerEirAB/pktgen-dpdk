@@ -25,6 +25,7 @@
     /* Internal APIs */
     char *pktgen_flags_string(port_info_t * pinfo);
     char *pktgen_transmit_count_rate(int port, char *buff, int len);
+    char *pktgen_transmit_count_pps(int port, char *buff, int len);
     void pktgen_update_display(void);
     void pktgen_update(void);
     char *pktgen_link_state(int port, char *buff, int len);
@@ -65,7 +66,6 @@
     void pktgen_seq_defaults(uint16_t pid);
 
     struct pg_ipaddr;
-
     /* Single */
     void single_set_ipaddr(port_info_t * pinfo, char type, struct pg_ipaddr *ip, int ip_ver);
     void single_set_proto(port_info_t * pinfo, char *type);
@@ -84,6 +84,7 @@
     void single_set_rx_burst(port_info_t * pinfo, uint32_t burst);
     void single_set_pkt_size(port_info_t * pinfo, uint16_t size);
     void single_set_tx_rate(port_info_t * pinfo, const char *rate);
+    void single_set_tx_pps(port_info_t * pinfo, uint64_t pps);
     void single_set_jitter(port_info_t * pinfo, uint64_t threshold);
     void single_set_ttl_value(port_info_t * pinfo, uint8_t ttl);
     void single_set_port_value(port_info_t * pinfo, char type, uint32_t portValue);

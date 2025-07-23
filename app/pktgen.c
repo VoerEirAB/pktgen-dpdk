@@ -118,6 +118,32 @@ pktgen_packet_rate(port_info_t *port)
     port->tx_pps    = pps;
 }
 
+/**************************************************************************
+ *
+ * pktgen_packet_pps - Set the PPS to fix rate.
+ *
+ * DESCRIPTION
+ * Calculate the number of cycles to wait between sending bursts of traffic.
+ *
+ * RETURNS: N/A
+ *
+ * SEE ALSO:
+ */
+
+void
+pktgen_packet_pps(port_info_t *port)
+{
+    uint64_t pps    = port->tx_pps;
+    uint8_t tx_rate = 255;        // disabling rate
+    port->tx_rate   = tx_rate;
+    // Handling when pps <= 0
+    pps = ((pps > 0) ? pps : 1);
+
+    uint64_t cpb = (rte_get_timer_hz() / pps) * (uint64_t)port->tx_burst; /* Cycles per Burst */
+
+    port->tx_cycles = (uint64_t)l2p_get_txcnt(port->pid) * cpb;
+}
+
 /**
  *
  * pktgen_fill_pattern - Create the fill pattern in a packet buffer.

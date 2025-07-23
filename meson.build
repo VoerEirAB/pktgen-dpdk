@@ -27,9 +27,22 @@ endif
 if get_option('enable-avx') and cc.has_argument('-mavx')
     add_project_arguments('-mavx', language: 'c')
 endif
-if get_option('enable-avx2') and cc.has_argument('-mavx2')
-	add_project_arguments('-mavx2', language: 'c')
+# https://stackoverflow.com/a/67632436/17683003
+lscpu = find_program('lscpu', required: false)
+extra_args = []
+
+if lscpu.found()
+  lscpu_output = run_command(lscpu, check: false).stdout()
+
+  if 'avx512f' in lscpu_output and cc.has_argument('-mavx512f')
+    extra_args += ['-mavx512f']
+  endif
+
+  if 'avx2' in lscpu_output and cc.has_argument('-mavx2')
+    extra_args += ['-mavx2']
+  endif
 endif
+add_project_arguments(extra_args, language: 'c')
 add_project_arguments('-DALLOW_EXPERIMENTAL_API', language: 'c')
 add_project_arguments('-D_GNU_SOURCE', language: 'c')
 

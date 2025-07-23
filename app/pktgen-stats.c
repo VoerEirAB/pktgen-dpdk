@@ -97,6 +97,7 @@ pktgen_print_static_data(void)
     ip_row = row;
     scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Rx/Tx queue count");
     scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Tx Count/% Rate");
+    scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "PPS");
     scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Pkt Size/Rx:Tx Burst");
     scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Port Src/Dest");
     scrn_printf(row++, 1, "%-*s", COLUMN_WIDTH_0, "Type:VLAN ID:Flags");
@@ -135,6 +136,8 @@ pktgen_print_static_data(void)
         scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, buff);
 
         pktgen_display_set_color("stats.stat.values");
+        pktgen_transmit_count_pps(pid, buff, sizeof(buff));
+        scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, buff);
         snprintf(buff, sizeof(buff), "%d /%3d:%3d", pkt->pkt_size + RTE_ETHER_CRC_LEN,
                  pinfo->rx_burst, pinfo->tx_burst);
         scrn_printf(row++, col, "%*s", COLUMN_WIDTH_1, buff);
