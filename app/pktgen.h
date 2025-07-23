@@ -341,6 +341,7 @@ void pktgen_page_display(void);
 
 void pktgen_packet_ctor(port_info_t *pinfo, int32_t seq_idx, int32_t type);
 void pktgen_packet_rate(port_info_t *pinfo);
+void pktgen_packet_pps(port_info_t *pinfo);
 
 int pktgen_find_matching_ipsrc(port_info_t *pinfo, uint32_t addr);
 int pktgen_find_matching_ipdst(port_info_t *pinfo, uint32_t addr);

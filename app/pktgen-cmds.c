@@ -141,6 +141,7 @@ pktgen_script_save(char *path)
                 rte_atomic64_read(&pinfo->transmit_count));
         fprintf(fd, "set %d size %d\n", pinfo->pid, pkt->pkt_size + RTE_ETHER_CRC_LEN);
         fprintf(fd, "set %d rate %g\n", pinfo->pid, pinfo->tx_rate);
+        fprintf(fd, "set %d pps %" PRIu64 "\n", pinfo->pid, pinfo->tx_pps);
         fprintf(fd, "set %d rxburst %d\n", pinfo->pid, pinfo->rx_burst);
         fprintf(fd, "set %d txburst %d\n", pinfo->pid, pinfo->tx_burst);
         fprintf(fd, "set %d sport %d\n", pinfo->pid, pkt->sport);
@@ -438,8 +439,7 @@ pktgen_lua_save(char *path)
     uint16_t rows, cols;
     pktgen_display_get_geometry(&rows, &cols);
     fprintf(fd, "--   geometry %dx%d\n", cols, rows);
-    fprintf(fd, "pktgen.mac_from_arp(\"%s\");\n\n",
-            (pktgen.flags & MAC_FROM_ARP_FLAG) ? "enable" : "disable");
+    fprintf(fd, "pktgen.mac_from_arp(\"%s\");\n\n", (pktgen.flags & MAC_FROM_ARP_FLAG) ? "enable" : "disable");
 
     for (i = 0; i < pktgen.nb_ports; i++) {
         pinfo = l2p_get_port_pinfo(i);
@@ -467,11 +467,11 @@ pktgen_lua_save(char *path)
         fprintf(fd, "Link: %s\n", buff);
 
         fprintf(fd, "--\n-- Set up the primary port information:\n");
-        fprintf(fd, "pktgen.set('%d', 'count', %" PRIu64 ");\n", pinfo->pid,
-                rte_atomic64_read(&pinfo->transmit_count));
+        fprintf(fd, "pktgen.set('%d', 'count', %" PRIu64 ");\n", pinfo->pid, rte_atomic64_read(&pinfo->transmit_count));
+        fprintf(fd, "pktgen.set('%d', 'size', %d);\n", pinfo->pid, pkt->pkt_size + RTE_ETHER_CRC_LEN);
+        fprintf(fd, "pktgen.set('%d', 'rate', %g);\n", pinfo->pid, pinfo->tx_rate);
         fprintf(fd, "pktgen.set('%d', 'size', %d);\n", pinfo->pid,
                 pkt->pkt_size + RTE_ETHER_CRC_LEN);
-        fprintf(fd, "pktgen.set('%d', 'rate', %g);\n", pinfo->pid, pinfo->tx_rate);
         fprintf(fd, "pktgen.set('%d', 'txburst', %d);\n", pinfo->pid, pinfo->tx_burst);
         fprintf(fd, "pktgen.set('%d', 'rxburst', %d);\n", pinfo->pid, pinfo->rx_burst);
         fprintf(fd, "pktgen.set('%d', 'sport', %d);\n", pinfo->pid, pkt->sport);
@@ -815,6 +815,31 @@ pktgen_link_state(int port, char *buff, int len)
 
 /**
  *
+ * pktgen_transmit_count_pps - Get a string for the current transmit PPS
+ *
+ * DESCRIPTION
+ * Current value of the transmit packets per second as a string.
+ *
+ * RETURNS: String pointer to transmit packets per second.
+ *
+ * SEE ALSO:
+ */
+
+char *
+pktgen_transmit_count_pps(int port, char *buff, int len)
+{
+    port_info_t *info = l2p_get_port_pinfo(port);
+
+    if (unlikely(info->tx_rate != 255))  // PPS was not set. tx_rate is not -1.
+        snprintf(buff, len, "Not Set");
+    else
+        snprintf(buff, len, "%" PRIu64, info->tx_pps);
+
+    return buff;
+}
+
+/**
+ *
  * pktgen_transmit_count_rate - Get a string for the current transmit count and rate
  *
  * DESCRIPTION
@@ -830,11 +855,13 @@ pktgen_transmit_count_rate(int port, char *buff, int len)
 {
     port_info_t *pinfo = l2p_get_port_pinfo(port);
 
+    char rate[] = "Not set";
+    if (pinfo->tx_rate != 255)
+        snprintf(rate, sizeof(rate), "%g%%", pinfo->tx_rate);
     if (rte_atomic64_read(&pinfo->transmit_count) == 0)
-        snprintf(buff, len, "Forever /%g%%", pinfo->tx_rate);
+        snprintf(buff, len, "Forever /%s", rate);
     else
-        snprintf(buff, len, "%" PRIu64 " /%g%%", rte_atomic64_read(&pinfo->transmit_count),
-                 pinfo->tx_rate);
+        snprintf(buff, len, "%" PRIu64 " /%s", rte_atomic64_read(&pinfo->transmit_count), rate);
 
     return buff;
 }
@@ -2748,6 +2775,28 @@ single_set_tx_rate(port_info_t *pinfo, const char *r)
     pinfo->tx_cycles = 0;
 
     pktgen_packet_rate(pinfo);
+}
+
+/**
+ *
+ * single_set_tx_pps - Set the transmit pps rate as a integer value.
+ *
+ * DESCRIPTION
+ * Set the transmit pps rate as a decimal value for all ports listed.
+ *
+ * RETURNS: N/A
+ *
+ * SEE ALSO:
+ */
+
+void
+single_set_tx_pps(port_info_t *pinfo, uint64_t pps)
+{
+    if (pps > 0)
+    {
+        pinfo->tx_pps = pps;
+        pktgen_packet_pps(pinfo);
+    }
 }
 
 /**
