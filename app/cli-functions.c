@@ -518,8 +518,8 @@ set_cmd(int argc, char **argv)
 			if (strcmp(m, "off")) {
 				int idx;
 				/* Filter invalid characters from provided mask. This way the user can
-				* more easily enter long bitmasks, using for example '_' as a separator
-				* every 8 bits. */
+				 * more easily enter long bitmasks, using for example '_' as a separator
+				 * every 8 bits. */
 				for (n = 0, idx = 0; (idx < 32) && ((cb = m[n]) != '\0'); n++)
 					if ((cb == '0') || (cb == '1') || (cb == '.') || (cb == 'X') || (cb == 'x'))
 						mask[idx++] = cb;
@@ -527,8 +527,7 @@ set_cmd(int argc, char **argv)
 			foreach_port(portlist,
 				enable_random(info, pktgen_set_random_bitfield(info->rnd_bitfields,
 					id1, id2, mask) ? ENABLE_STATE : DISABLE_STATE));
-			}
-			break;
+		} break;
 		case 70:
 			id1 = strtol(argv[3], NULL, 0);
 			foreach_port(portlist, single_set_cos(info, id1));

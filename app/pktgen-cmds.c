@@ -467,8 +467,9 @@ pktgen_lua_save(char *path)
 	uint16_t rows, cols;
 	pktgen_display_get_geometry(&rows, &cols);
 	fprintf(fd, "-- geometry %dx%d\n", cols, rows);
-	fprintf(fd, "pktgen.mac_from_arp(\"%s\");\n\n",
-		(pktgen.flags & MAC_FROM_ARP_FLAG) ? "enable" : "disable");
+	fprintf(fd, "pktgen.mac_from_arp(\"%s\");\n\n", (pktgen.flags & MAC_FROM_ARP_FLAG) ?
+							  "enable" :
+							  "disable");
 
 	for (i = 0; i < RTE_MAX_ETHPORTS; i++) {
 		info = &pktgen.info[i];
@@ -2794,8 +2795,7 @@ range_set_dest_mac(port_info_t *info,
  */
 
 void
-range_set_src_mac(port_info_t *info, const char *what,
-		   struct ether_addr *mac)
+range_set_src_mac(port_info_t *info, const char *what, struct ether_addr *mac)
 {
 	if (!strcmp(what, "min") || !strcmp(what, "minimum"))
 		inet_mtoh64(mac, &info->range.src_mac_min);
