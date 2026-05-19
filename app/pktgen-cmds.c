@@ -468,7 +468,7 @@ pktgen_lua_save(char *path)
 	pktgen_display_get_geometry(&rows, &cols);
 	fprintf(fd, "-- geometry %dx%d\n", cols, rows);
 	fprintf(fd, "pktgen.mac_from_arp(\"%s\");\n\n",
-		(pktgen.flags & MAC_FROM_ARP_FLAG) ? "enable" : "disable");
+	        (pktgen.flags & MAC_FROM_ARP_FLAG) ? "enable" : "disable");
 
 	for (i = 0; i < RTE_MAX_ETHPORTS; i++) {
 		info = &pktgen.info[i];
@@ -900,7 +900,7 @@ pktgen_transmit_count_pps(int port, char *buff, int len)
 {
 	port_info_t *info = &pktgen.info[port];
 
-	if (info->tx_rate != 255)  // PPS was not set. tx_rate is not -1.
+	if (info->tx_rate != 255) // PPS was not set. tx_rate is not -1.
 		snprintf(buff, len, "Not Set");
 	else
 		snprintf(buff, len, "%" PRIu64, info->tx_pps);
@@ -2774,7 +2774,7 @@ range_set_dest_mac(port_info_t *info,
 		inet_mtoh64(mac, &info->range.dst_mac_max);
 	else if (!strcmp(what, "inc") || !strcmp(what, "increment"))
 		inet_mtoh64(mac, &info->range.dst_mac_inc);
-	else if (!strcmp(what, "start") ) {
+	else if (!strcmp(what, "start")) {
 		inet_mtoh64(mac, &info->range.dst_mac);
 		/* Changes add below to reflect MAC value in range */
 		memcpy(&info->seq_pkt[RANGE_PKT].eth_dst_addr, mac, 6);
