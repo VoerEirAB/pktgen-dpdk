@@ -517,15 +517,15 @@ set_cmd(int argc, char **argv)
 			m = argv[5];
 			if (strcmp(m, "off")) {
 				int idx;
-                                /* Filter invalid characters from provided mask.
-                                 * This way the user can more easily enter long
-                                 * bitmasks, using for example '_' as a
-                                 * separator every 8 bits. */
-                                for (n = 0, idx = 0;
-                                     (idx < 32) && ((cb = m[n]) != '\0'); n++)
-                                  if ((cb == '0') || (cb == '1') ||
-                                      (cb == '.') || (cb == 'X') || (cb == 'x'))
-                                    mask[idx++] = cb;
+				/* Filter invalid characters from provided mask.
+				 * This way the user can more easily enter long
+				 * bitmasks, using for example '_' as a
+				 * separator every 8 bits. */
+				for (n = 0, idx = 0;
+				     (idx < 32) && ((cb = m[n]) != '\0'); n++)
+					if ((cb == '0') || (cb == '1') ||
+					    (cb == '.') || (cb == 'X') || (cb == 'x'))
+						mask[idx++] = cb;
 			}
 			foreach_port(portlist,
 				enable_random(info, pktgen_set_random_bitfield(info->rnd_bitfields,
