@@ -521,7 +521,8 @@ range_cmd(int argc, char **argv)
     "seqcnt|"    /* 13 */ \
     "ttl|"       /* 14 */ \
     "txburst|"   /* 15 */ \
-    "rxburst"    /* 16 */
+    "rxburst"    /* 16 */ \
+    "pps"        /* 17 */
 
 // clang-format off
 static struct cli_map set_map[] = {
@@ -557,6 +558,7 @@ static const char *set_help[] = {
     "'all'",
     "set <portlist> count <value>       - number of packets to transmit",
     "set <portlist> size <value>        - size of the packet to transmit",
+    "set <portlist> pss <value>         - Packets per second value",
     "set <portlist> rate <percent>      - Packet rate in percentage",
     "set <portlist> txburst|burst <value> - number of packets in a TX burst",
     "set <portlist> rxburst <value>     - number of packets in a RX burst",
@@ -680,6 +682,9 @@ set_cmd(int argc, char **argv)
                 break;
             case 16:
                 single_set_rx_burst(pinfo, value);
+                break;
+            case 17:
+                single_set_tx_pps(pinfo, value);
                 break;
             default:
                 return cli_cmd_error("Set command is invalid", "Set", argc, argv);
